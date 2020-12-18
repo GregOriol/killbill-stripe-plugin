@@ -764,10 +764,10 @@ public class StripePaymentPluginApi extends PluginPaymentPluginApi<StripeRespons
 
                                                  final ImmutableList.Builder<String> paymentMethodTypesBuilder = ImmutableList.builder();
                                                  paymentMethodTypesBuilder.add("card");
-                                                 if (transactionType == TransactionType.PURCHASE) {
-                                                     // See https://groups.google.com/forum/?#!msg/killbilling-users/li3RNs-YmIA/oaUrBElMFQAJ
-                                                     paymentMethodTypesBuilder.add("ach_debit");
-                                                 }
+                                                 // if (transactionType == TransactionType.PURCHASE) {
+                                                 //     // See https://groups.google.com/forum/?#!msg/killbilling-users/li3RNs-YmIA/oaUrBElMFQAJ
+                                                 //     paymentMethodTypesBuilder.add("ach_debit");
+                                                 // }
                                                  paymentIntentParams.put("payment_method_types", paymentMethodTypesBuilder.build());
 
                                                  final StripeConfigProperties stripeConfigProperties = stripeConfigPropertiesConfigurationHandler.getConfigurable(context.getTenantId());
