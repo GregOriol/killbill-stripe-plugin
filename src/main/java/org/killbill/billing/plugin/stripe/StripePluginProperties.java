@@ -22,6 +22,7 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.stripe.exception.StripeException;
 import com.stripe.model.BankAccount;
 import com.stripe.model.Charge;
 import com.stripe.model.PaymentIntent;
@@ -186,14 +187,9 @@ public abstract class StripePluginProperties {
         additionalDataMap.put("canceled_at", stripePaymentIntent.getCanceledAt());
         additionalDataMap.put("cancellation_reason", stripePaymentIntent.getCancellationReason());
         additionalDataMap.put("capture_method", stripePaymentIntent.getCaptureMethod());
-        if (stripePaymentIntent.getCharges() != null) {
-            Charge lastCharge = null;
-            for (final Charge charge : stripePaymentIntent.getCharges().autoPagingIterable()) {
-                if (lastCharge == null || lastCharge.getCreated() < charge.getCreated()) {
-                    lastCharge = charge;
-                }
-            }
-            if (lastCharge != null) {
+        if (stripePaymentIntent.getLatestCharge() != null) {
+            try {
+                final Charge lastCharge = Charge.retrieve(stripePaymentIntent.getLatestCharge());
                 // Keep the state for the last charge (maps to our payment transaction)
                 additionalDataMap.put("last_charge_amount", lastCharge.getAmount());
                 additionalDataMap.put("last_charge_authorization_code", lastCharge.getAuthorizationCode());
@@ -214,6 +210,8 @@ public abstract class StripePluginProperties {
                 }
                 additionalDataMap.put("last_charge_statement_descriptor", lastCharge.getStatementDescriptor());
                 additionalDataMap.put("last_charge_status", lastCharge.getStatus());
+            } catch (final StripeException e) {
+                throw new RuntimeException("Unable to retrieve latest charge", e);
             }
         }
         additionalDataMap.put("confirmation_method", stripePaymentIntent.getConfirmationMethod());
@@ -222,7 +220,7 @@ public abstract class StripePluginProperties {
         additionalDataMap.put("customer_id", stripePaymentIntent.getCustomer());
         additionalDataMap.put("description", stripePaymentIntent.getDescription());
         additionalDataMap.put("id", stripePaymentIntent.getId());
-        additionalDataMap.put("invoice_id", stripePaymentIntent.getInvoice());
+        // invoice_id no longer directly available on PaymentIntent in stripe-java v31+
         additionalDataMap.put("last_payment_error", stripePaymentIntent.getLastPaymentError());
         additionalDataMap.put("livemode", stripePaymentIntent.getLivemode());
         additionalDataMap.put("metadata", stripePaymentIntent.getMetadata());
