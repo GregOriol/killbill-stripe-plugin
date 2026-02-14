@@ -187,7 +187,8 @@ public class StripePaymentPluginApi extends PluginPaymentPluginApi<StripeRespons
                                     requestOptions
                             );
                     }
-                    dao.updateResponse(transaction.getKbTransactionPaymentId(), intent, context.getTenantId());
+                    final Charge lastCharge = getLastCharge(intent, requestOptions);
+                    dao.updateResponse(transaction.getKbTransactionPaymentId(), intent, lastCharge, context.getTenantId());
                     wasRefreshed = true;
                 } catch (final StripeException e) {
                     logger.warn("Unable to fetch latest payment state in Stripe, data might be stale", e);
@@ -908,7 +909,8 @@ public class StripePaymentPluginApi extends PluginPaymentPluginApi<StripeRespons
         }
 
         try {
-            final StripeResponsesRecord responsesRecord = dao.addResponse(kbAccountId, kbPaymentId, kbTransactionId, transactionType, amount, currency, response, utcNow, context.getTenantId());
+            final Charge lastCharge = getLastCharge(response, buildRequestOptions(context));
+            final StripeResponsesRecord responsesRecord = dao.addResponse(kbAccountId, kbPaymentId, kbTransactionId, transactionType, amount, currency, response, lastCharge, utcNow, context.getTenantId());
             return StripePaymentTransactionInfoPlugin.build(responsesRecord);
         } catch (final SQLException e) {
             throw new PaymentPluginApiException("Payment went through, but we encountered a database error. Payment details: " + response.toString(), e);
@@ -952,7 +954,8 @@ public class StripePaymentPluginApi extends PluginPaymentPluginApi<StripeRespons
         }
 
         try {
-            final StripeResponsesRecord responsesRecord = dao.addResponse(kbAccountId, kbPaymentId, kbTransactionId, transactionType, amount, currency, response, utcNow, context.getTenantId());
+            final Charge lastCharge = getLastCharge(response, buildRequestOptions(context));
+            final StripeResponsesRecord responsesRecord = dao.addResponse(kbAccountId, kbPaymentId, kbTransactionId, transactionType, amount, currency, response, lastCharge, utcNow, context.getTenantId());
             return StripePaymentTransactionInfoPlugin.build(responsesRecord);
         } catch (final SQLException e) {
             throw new PaymentPluginApiException("Payment went through, but we encountered a database error. Payment details: " + (response.toString()), e);
@@ -999,6 +1002,18 @@ public class StripePaymentPluginApi extends PluginPaymentPluginApi<StripeRespons
             record.setKbPaymentMethodId(kbPaymentMethodId.toString());
         }
         return record;
+    }
+
+    private Charge getLastCharge(@Nullable final PaymentIntent stripePaymentIntent, final RequestOptions requestOptions) {
+        if (stripePaymentIntent == null || stripePaymentIntent.getLatestCharge() == null) {
+            return null;
+        }
+        try {
+            return Charge.retrieve(stripePaymentIntent.getLatestCharge(), requestOptions);
+        } catch (final StripeException e) {
+            logger.warn("Unable to retrieve latest charge {}", stripePaymentIntent.getLatestCharge(), e);
+            return null;
+        }
     }
 
     private boolean shouldSkipStripe(final Iterable<PluginProperty> properties) {

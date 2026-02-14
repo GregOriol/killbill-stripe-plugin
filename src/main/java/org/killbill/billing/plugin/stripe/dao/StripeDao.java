@@ -44,6 +44,7 @@ import org.killbill.billing.plugin.stripe.dao.gen.tables.StripeResponses;
 import org.killbill.billing.plugin.stripe.dao.gen.tables.records.StripeHppRequestsRecord;
 import org.killbill.billing.plugin.stripe.dao.gen.tables.records.StripePaymentMethodsRecord;
 import org.killbill.billing.plugin.stripe.dao.gen.tables.records.StripeResponsesRecord;
+import com.stripe.model.Charge;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.checkout.Session;
 
@@ -181,9 +182,10 @@ public class StripeDao extends PluginPaymentDao<StripeResponsesRecord, StripeRes
                                              final BigDecimal amount,
                                              final Currency currency,
                                              final PaymentIntent stripePaymentIntent,
+                                             @Nullable final Charge lastCharge,
                                              final DateTime utcNow,
                                              final UUID kbTenantId) throws SQLException {
-        final Map<String, Object> additionalDataMap = StripePluginProperties.toAdditionalDataMap(stripePaymentIntent);
+        final Map<String, Object> additionalDataMap = StripePluginProperties.toAdditionalDataMap(stripePaymentIntent, lastCharge);
 
         return execute(dataSource.getConnection(),
                        new WithConnectionCallback<StripeResponsesRecord>() {
@@ -219,8 +221,9 @@ public class StripeDao extends PluginPaymentDao<StripeResponsesRecord, StripeRes
 
     public StripeResponsesRecord updateResponse(final UUID kbPaymentTransactionId,
                                                 final PaymentIntent stripePaymentIntent,
+                                                @Nullable final Charge lastCharge,
                                                 final UUID kbTenantId) throws SQLException {
-        final Map<String, Object> additionalDataMap = StripePluginProperties.toAdditionalDataMap(stripePaymentIntent);
+        final Map<String, Object> additionalDataMap = StripePluginProperties.toAdditionalDataMap(stripePaymentIntent, lastCharge);
         return updateResponse(kbPaymentTransactionId, additionalDataMap, kbTenantId);
     }
 
