@@ -813,7 +813,7 @@ public class StripePaymentPluginApi extends PluginPaymentPluginApi<StripeRespons
                                                  paymentIntentParams.put("amount", KillBillMoney.toMinorUnits(currency.toString(), amount));
                                                  paymentIntentParams.put("currency", currency.toString());
                                                  paymentIntentParams.put("capture_method", captureMethod.value);
-                                                 // TODO Do we need to switch to manual confirmation to be able to set off_session=recurring?
+                                                 paymentIntentParams.put("off_session", true);
                                                  paymentIntentParams.put("confirm", true);
                                                  // See https://stripe.com/docs/api/payment_intents/create#create_payment_intent-return_url
                                                  final String returnUrl = PluginProperties.findPluginPropertyValue("return_url", properties);
