@@ -175,6 +175,48 @@ public class StripeDao extends PluginPaymentDao<StripeResponsesRecord, StripeRes
 
     // Responses
 
+    public StripeResponsesRecord addErrorResponse(final UUID kbAccountId,
+                                                  final UUID kbPaymentId,
+                                                  final UUID kbPaymentTransactionId,
+                                                  final TransactionType transactionType,
+                                                  final BigDecimal amount,
+                                                  final Currency currency,
+                                                  final String errorCode,
+                                                  final Map<String, Object> additionalDataMap,
+                                                  final DateTime utcNow,
+                                                  final UUID kbTenantId) throws SQLException {
+        return execute(dataSource.getConnection(),
+                       new WithConnectionCallback<StripeResponsesRecord>() {
+                           @Override
+                           public StripeResponsesRecord withConnection(final Connection conn) throws SQLException {
+                               return DSL.using(conn, dialect, settings)
+                                         .insertInto(STRIPE_RESPONSES,
+                                                     STRIPE_RESPONSES.KB_ACCOUNT_ID,
+                                                     STRIPE_RESPONSES.KB_PAYMENT_ID,
+                                                     STRIPE_RESPONSES.KB_PAYMENT_TRANSACTION_ID,
+                                                     STRIPE_RESPONSES.TRANSACTION_TYPE,
+                                                     STRIPE_RESPONSES.AMOUNT,
+                                                     STRIPE_RESPONSES.CURRENCY,
+                                                     STRIPE_RESPONSES.STRIPE_ID,
+                                                     STRIPE_RESPONSES.ADDITIONAL_DATA,
+                                                     STRIPE_RESPONSES.CREATED_DATE,
+                                                     STRIPE_RESPONSES.KB_TENANT_ID)
+                                         .values(kbAccountId.toString(),
+                                                 kbPaymentId.toString(),
+                                                 kbPaymentTransactionId.toString(),
+                                                 transactionType.toString(),
+                                                 amount,
+                                                 currency == null ? null : currency.name(),
+                                                 errorCode,
+                                                 asString(additionalDataMap),
+                                                 toLocalDateTime(utcNow),
+                                                 kbTenantId.toString())
+                                         .returning()
+                                         .fetchOne();
+                           }
+                       });
+    }
+
     public StripeResponsesRecord addResponse(final UUID kbAccountId,
                                              final UUID kbPaymentId,
                                              final UUID kbPaymentTransactionId,

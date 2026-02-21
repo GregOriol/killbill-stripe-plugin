@@ -71,6 +71,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.stripe.exception.CardException;
+import com.stripe.exception.InvalidRequestException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
 import com.stripe.model.Customer;
@@ -902,6 +903,17 @@ public class StripePaymentPluginApi extends PluginPaymentPluginApi<StripeRespons
                     response = paymentIntent;
                 } catch (final StripeException e2) {
                     throw new PaymentPluginApiException("Error getting card error details from Stripe", e2);
+                }
+            } catch (final InvalidRequestException e) {
+                try {
+                    final Map<String, Object> additionalDataMap = new HashMap<String, Object>();
+                    additionalDataMap.put(PROPERTY_OVERRIDDEN_TRANSACTION_STATUS, PaymentPluginStatus.ERROR.toString());
+                    additionalDataMap.put("last_charge_failure_code", e.getCode());
+                    additionalDataMap.put("last_charge_failure_message", e.getMessage());
+                    final StripeResponsesRecord responsesRecord = dao.addErrorResponse(kbAccountId, kbPaymentId, kbTransactionId, transactionType, amount, currency, e.getCode(), additionalDataMap, utcNow, context.getTenantId());
+                    return StripePaymentTransactionInfoPlugin.build(responsesRecord);
+                } catch (final SQLException e2) {
+                    throw new PaymentPluginApiException("Error recording payment failure", e2);
                 }
             } catch (final StripeException e) {
                 throw new PaymentPluginApiException("Error connecting to Stripe", e);
