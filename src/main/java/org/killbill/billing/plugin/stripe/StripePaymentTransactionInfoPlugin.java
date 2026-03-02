@@ -96,10 +96,13 @@ public class StripePaymentTransactionInfoPlugin extends PluginPaymentTransaction
                 return PaymentPluginStatus.ERROR;
             }
             if ("requires_payment_method".equals(status)
-                && additionalData.get("last_payment_error") != null
-                && "payment_intent_authentication_failure".equals(((Map) additionalData.get("last_payment_error")).get("code"))) {
-                // Failed 3DS intent, but not yet cancelled
-                return PaymentPluginStatus.PENDING;
+                && additionalData.get("last_payment_error") != null) {
+                // Failed 3DS intent not yet cancelled: can still be retried with a new payment method
+                if ("payment_intent_authentication_failure".equals(((Map) additionalData.get("last_payment_error")).get("code"))) {
+                    return PaymentPluginStatus.PENDING;
+                }
+                // All other failures (authentication_required, card_declined, insufficient_funds, etc.)
+                return PaymentPluginStatus.ERROR;
             }
             return PaymentPluginStatus.UNDEFINED;
         } else {

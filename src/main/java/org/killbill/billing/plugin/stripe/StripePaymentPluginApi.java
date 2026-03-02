@@ -897,10 +897,16 @@ public class StripePaymentPluginApi extends PluginPaymentPluginApi<StripeRespons
             } catch (final CardException e) {
                 try {
                     final RequestOptions requestOptions = buildRequestOptions(context);
-                    final Charge charge = Charge.retrieve(e.getCharge(), requestOptions);
-                    final String paymentIntentId = charge.getPaymentIntent();
-                    final PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentIntentId, requestOptions);
-                    response = paymentIntent;
+                    if (e.getCharge() != null) {
+                        final Charge charge = Charge.retrieve(e.getCharge(), requestOptions);
+                        final String paymentIntentId = charge.getPaymentIntent();
+                        response = PaymentIntent.retrieve(paymentIntentId, requestOptions);
+                    } else if (e.getStripeError() != null && e.getStripeError().getPaymentIntent() != null) {
+                        // authentication_required has no charge but includes the payment intent in the error
+                        response = PaymentIntent.retrieve(e.getStripeError().getPaymentIntent().getId(), requestOptions);
+                    } else {
+                        throw new PaymentPluginApiException("Error getting card error details from Stripe", e);
+                    }
                 } catch (final StripeException e2) {
                     throw new PaymentPluginApiException("Error getting card error details from Stripe", e2);
                 }
